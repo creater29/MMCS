@@ -1,0 +1,17 @@
+# Web framework and server
+fastapi>=0.110.0
+uvicorn[standard]>=0.29.0
+
+# Environment variable loading
+python-dotenv>=1.0.0
+
+# Async HTTP client (used by FastAPI internally)
+httpx>=0.27.0
+
+# LLM provider SDKs
+anthropic>=0.25.0
+openai>=1.30.0
+google-generativeai>=0.5.0
+
+# Data validation (FastAPI uses this under the hood)
+pydantic>=2.0.0
