@@ -257,9 +257,12 @@ def _check_consensus(phase2_results: List[PhaseResult]) -> tuple[bool, Optional[
     best_answer_key = max(answer_groups, key=lambda k: len(answer_groups[k]))
     agreeing = answer_groups[best_answer_key]
 
-    if len(agreeing) < 2:
-        # No majority — all three models gave different answers.
+    total_models = len(phase2_results)
+    if total_models >= 2 and len(agreeing) < 2:
+        # No majority — models gave different answers.
         return False, None
+    elif total_models == 1:
+        pass # Single model always "agrees" with itself
 
     avg_confidence = sum(r.confidence for r in agreeing) / len(agreeing)
     if avg_confidence < 70:
@@ -303,18 +306,20 @@ async def run_orchestration(
     logger.info(f"Starting orchestration for question: {question[:80]}...")
 
     # Instantiate one client per provider using the user's own keys.
-    clients = [
-        get_client("claude", session_keys.claude.key, session_keys.claude.model),
-        get_client("openai", session_keys.openai.key, session_keys.openai.model),
-        get_client("gemini", session_keys.gemini.key, session_keys.gemini.model),
-    ]
+    clients = []
+    if session_keys.claude.key:
+        clients.append(get_client("claude", session_keys.claude.key, session_keys.claude.model))
+    if session_keys.openai.key:
+        clients.append(get_client("openai", session_keys.openai.key, session_keys.openai.model))
+    if session_keys.gemini.key:
+        clients.append(get_client("gemini", session_keys.gemini.key, session_keys.gemini.model))
 
     # Initial parallel generation — all three models answer simultaneously.
     logger.info("Running initial parallel generation...")
     initial_answers = await _generate_initial_answers(clients, question, resources)
 
     if not initial_answers:
-        raise RuntimeError("All three providers failed during initial generation.")
+        raise RuntimeError("All active providers failed during initial generation.")
 
     # Self-check loop.
     iterations: List[LoopIteration] = []
